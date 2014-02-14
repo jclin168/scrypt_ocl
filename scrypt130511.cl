@@ -759,13 +759,16 @@ void scrypt_core(uint4 X[8], __global uint4*restrict lookup)
 	const uint zSIZE = 8U;
 	const uint ySIZE = 512U;
 	const uint xSIZE = CONCURRENT_THREADS;
+	const uint gid = (get_group_id(0) & 0x7FU) * (1U+get_local_size(0)) + get_local_id(0);
 #if (CONCURRENT_THREADS==8192)
-	const uint x = get_global_id(0) & 0x1FFFU;
+	const uint x= gid & 0x1FFFU;
+#elif (CONCURRENT_THREADS==16384)
+	const uint x = gid & 0x3FFFU;
 #else
-	const uint x = get_global_id(0)%xSIZE;
+	const uint x = gid % xSIZE;
 #endif
 
-	for(uint y=0; y<512; ++y)
+	for(uint y=0; y<512U; ++y)
 	{
 #pragma unroll
 		for(uint z=0; z<zSIZE; ++z)
@@ -773,7 +776,7 @@ void scrypt_core(uint4 X[8], __global uint4*restrict lookup)
 		for(uint i=0; i<LOOKUP_GAP; ++i) 
 			salsa(X);
 	}
-	for (uint i=0; i<1024; ++i) 
+	for (uint i=0; i<1024U; ++i) 
 	{
 		uint4 V[8];
 		const uint y = (X[7].x & K[85]) >> 1U;	// AMD optimization (ubit_extract)
